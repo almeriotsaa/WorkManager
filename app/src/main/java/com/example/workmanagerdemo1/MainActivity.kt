@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("LIFECYCLE", "on create di panggil")
 
         binding.button.setOnClickListener {
-
+            setOneTimeWorkRequest()
         }
 
     }
@@ -56,7 +56,39 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setOneTimeWorkRequest() {
+        val workManager = WorkManager.getInstance(applicationContext)
 
+        //constarint digunakan untuk syarat worker akan berjalan apabila
+        //kondisi tersebut terpenuhi
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresCharging(true)
+            .build()
+
+        // membuat input ke dalam worker UploaderWorker
+        val data = Data.Builder()
+            .putInt(KEY_COUNT_VALUE, 125)
+            .build()
+
+        // membuat request worker
+        val uploadRequest = OneTimeWorkRequest.Builder(UploadWorker::class.java)
+            .setConstraints(constraints)
+            .setInputData(data)
+            .build()
+
+        // mengirimkan request worker ke sistem
+        workManager.enqueue(uploadRequest)
+
+        // mendapatkan status workermanager
+        workManager.getWorkInfoByIdLiveData(uploadRequest.id)
+            .observe(this, {
+                binding.status.text = it.state.name
+                if (it.state.isFinished){
+                    val date = it.outputData
+                    val message = date.getString(UploadWorker.KEY_WORKER)
+                    Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 }
 
